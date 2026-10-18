@@ -1,1 +1,629 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoByte - AI Water Footprint Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ecoDark: '#081c15',
+                        ecoForest: '#1b4332',
+                        ecoMid: '#2d6a4f',
+                        ecoLeaf: '#40916c',
+                        ecoLight: '#d8f3dc',
+                        ecoAccent: '#52b788',
+                        waterBlue: '#0284c7',
+                        waterLight: '#38bdf8',
+                        waterCyan: '#06b6d4'
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 4s ease-in-out infinite'
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-8px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #05130e 0%, #081c15 50%, #112d22 100%);
+            color: #f1f5f9;
+            min-height: 100vh;
+        }
+        .eco-card {
+            background: rgba(27, 67, 50, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(82, 183, 136, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .water-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid rgba(56, 189, 248, 0.5);
+            box-shadow: 0 0 25px rgba(2, 132, 199, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.6);
+            background: #081c15;
+        }
+
+        .water-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+            transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .water-wave {
+            position: absolute;
+            top: -12px;
+            left: 0;
+            width: 200%;
+            height: 14px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0 C150,90 350,-40 500,40 C650,120 900,10 1200,40 L1200,120 L0,120 Z' fill='%2338bdf8' opacity='0.8'%3E%3C/path%3E%3C/svg%3E");
+            background-size: 50% 100%;
+            animation: wave 4s linear infinite;
+        }
+
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .step-transition {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #081c15;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d6a4f;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #40916c;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-100">
+
+    <div class="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
+        <div class="absolute -top-32 -left-32 w-96 h-96 bg-ecoAccent/10 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/2 -right-32 w-96 h-96 bg-waterBlue/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-32 left-1/3 w-96 h-96 bg-ecoLeaf/10 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="relative z-10 flex-grow max-w-4xl mx-auto px-4 sm:px-6 w-full py-6 flex flex-col justify-between">
+
+        <header class="flex justify-between items-center pb-6 border-b border-ecoLeaf/20">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="goToStep(1)">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-ecoLeaf to-ecoDark border border-ecoAccent/40 flex items-center justify-center text-ecoAccent text-xl shadow-lg">
+                    <i class="fa-solid fa-leaf animate-float"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                        Eco<span class="text-waterLight">Byte</span>
+                    </h1>
+                    <p class="text-[11px] text-ecoAccent font-medium tracking-wider uppercase" id="header-tagline">AI Vízlábnyom Kalkulátor</p>
+                </div>
+            </div>
+
+            <button onclick="toggleLanguage()" class="flex items-center gap-2 px-3.5 py-1.5 bg-ecoForest/80 border border-ecoAccent/30 hover:border-ecoAccent text-ecoAccent hover:text-white rounded-full text-xs font-semibold transition duration-300 shadow-md">
+                <i class="fa-solid fa-globe"></i>
+                <span id="lang-btn-text">English</span>
+            </button>
+        </header>
+
+        <div class="my-6">
+            <div class="flex justify-between items-center mb-2 text-xs font-semibold text-slate-400">
+                <span id="step-indicator-text">1. Lépés: Bemenet</span>
+                <span id="step-progress-percent">33%</span>
+            </div>
+            <div class="w-full h-2 bg-ecoDark/80 rounded-full overflow-hidden border border-ecoLeaf/20 p-0.5">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-ecoLeaf via-ecoAccent to-waterLight rounded-full transition-all duration-500" style="width: 33%;"></div>
+            </div>
+        </div>
+
+        <main id="step-1" class="step-transition my-auto py-8">
+            <div class="eco-card p-6 sm:p-10 rounded-3xl text-center max-w-xl mx-auto relative overflow-hidden">
+                <div class="w-20 h-20 mx-auto mb-6 rounded-3xl bg-ecoDark/60 border border-ecoAccent/40 flex items-center justify-center text-waterLight text-4xl shadow-xl">
+                    <i class="fa-solid fa-droplet text-waterLight animate-bounce"></i>
+                </div>
+                
+                <h2 id="s1-title" class="text-2xl sm:text-4xl font-extrabold text-white mb-3">
+                    Üdvözöl az EcoByte!
+                </h2>
+                <p id="s1-subtitle" class="text-slate-300 text-sm sm:text-base leading-relaxed mb-8">
+                    Minden egyes AI-val generált szöveg, kód vagy kép mögött vízfogyasztás áll. Számold ki a te napi digitális vízlábnyomodat!
+                </p>
+
+                <form onsubmit="event.preventDefault(); proceedToStep2();" class="space-y-6 text-left">
+                    <div>
+                        <label id="s1-label-name" for="user-name" class="block text-xs font-bold uppercase tracking-wider text-ecoAccent mb-2">
+                            Hogy hívnak?
+                        </label>
+                        <div class="relative">
+                            <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="user-name" required placeholder="Pl. Anna vagy Péter" 
+                                class="w-full pl-11 pr-4 py-3.5 bg-ecoDark/80 border border-ecoLeaf/40 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-ecoAccent focus:ring-1 focus:ring-ecoAccent transition text-sm">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-4 bg-gradient-to-r from-ecoLeaf to-ecoMid hover:from-ecoAccent hover:to-ecoLeaf text-white font-bold rounded-xl shadow-lg hover:shadow-ecoAccent/25 transition duration-300 flex items-center justify-center gap-2 text-base">
+                        <span id="s1-btn-next">Számítás indítása</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </main>
+
+        <main id="step-2" class="step-transition hidden my-auto py-4">
+            <div class="eco-card p-6 sm:p-8 rounded-3xl">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2 border-b border-ecoLeaf/20 pb-4">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-calculator text-ecoAccent"></i>
+                            <span id="s2-title">Napi AI Használatod</span>
+                        </h2>
+                        <p id="s2-subtitle" class="text-xs text-slate-300 mt-1">
+                            Add meg, hányszor végzel az alábbi tevékenységekből egyetlen nap alatt!
+                        </p>
+                    </div>
+                    <span id="user-greeting-badge" class="px-3 py-1 bg-ecoAccent/10 text-ecoAccent border border-ecoAccent/30 rounded-full text-xs font-semibold">
+                        Szia!
+                    </span>
+                </div>
+
+                <div id="activities-container" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 max-h-[50vh] overflow-y-auto pr-1">
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 mt-8 pt-4 border-t border-ecoLeaf/20">
+                    <button onclick="goToStep(1)" class="w-full sm:w-1/3 py-3 bg-ecoDark/60 hover:bg-ecoDark text-slate-300 font-semibold rounded-xl border border-ecoLeaf/30 transition text-sm">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> <span id="s2-btn-back">Vissza</span>
+                    </button>
+                    <button onclick="calculateAndShowResult()" class="w-full sm:w-2/3 py-3 bg-gradient-to-r from-waterBlue to-waterCyan hover:from-waterLight hover:to-waterBlue text-slate-950 font-extrabold rounded-xl shadow-lg hover:shadow-waterLight/25 transition duration-300 flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-droplet"></i>
+                        <span id="s2-btn-calc">Lábnyom Kiszámítása</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <main id="step-3" class="step-transition hidden py-4">
+            <div class="eco-card p-6 sm:p-8 rounded-3xl mb-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div>
+                    <span class="px-3 py-1 bg-ecoAccent/20 text-ecoAccent rounded-full text-xs font-bold uppercase tracking-wider border border-ecoAccent/30" id="s3-badge">
+                        Eredmény Elemzés
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-2" id="s3-user-title">
+                        Kedves [Név], íme a napi AI Vízlábnyomod!
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-300 mt-2 max-w-xl" id="s3-subtitle">
+                        A megadott napi tevékenységeid alapján kiszámoltuk a közvetlen szerverhűtés és közvetett energiaforrások által elhasznált vízmennyiséget.
+                    </p>
+                </div>
+
+                <div class="flex flex-col items-center flex-shrink-0">
+                    <div class="water-container flex items-center justify-center">
+                        <div id="water-fill-level" class="water-fill" style="height: 0%;">
+                            <div class="water-wave"></div>
+                        </div>
+                        <div class="relative z-10 text-center">
+                            <div id="res-liters-num" class="text-3xl sm:text-4xl font-extrabold text-white drop-shadow-md">0</div>
+                            <div class="text-[11px] uppercase tracking-wider text-slate-200 font-bold" id="res-liters-unit">Liter / nap</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="eco-card p-5 rounded-2xl flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-waterLight flex items-center justify-center text-2xl flex-shrink-0 border border-waterBlue/30">
+                        <i class="fa-solid fa-bath"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium" id="comp1-label">Éves szinten tele töltene:</div>
+                        <div class="text-lg font-bold text-white" id="comp1-val">0 kád vizet (150L/kád)</div>
+                    </div>
+                </div>
+
+                <div class="eco-card p-5 rounded-2xl flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-ecoAccent/20 text-ecoAccent flex items-center justify-center text-2xl flex-shrink-0 border border-ecoAccent/30">
+                        <i class="fa-solid fa-bottle-water"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium" id="comp2-label">Ez megfelel ennyi ivóvíznek:</div>
+                        <div class="text-lg font-bold text-white" id="comp2-val">0 ember napi ivóvízszükséglete</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="eco-card p-6 rounded-3xl mb-6">
+                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2 border-b border-ecoLeaf/20 pb-3" id="s3-breakdown-title">
+                    <i class="fa-solid fa-list-check text-ecoAccent"></i> Részletes Tételek és Fogyasztás
+                </h3>
+
+                <div id="breakdown-list" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-ecoLeaf/20 flex justify-between items-center text-sm font-bold">
+                    <span class="text-slate-300" id="s3-total-label">Összesen:</span>
+                    <span id="breakdown-total-val" class="text-waterLight text-base">0 Liter / nap</span>
+                </div>
+            </div>
+
+
+            <div class="eco-card p-6 rounded-3xl mb-8 bg-gradient-to-r from-ecoForest/60 to-ecoDark/80">
+                <h3 class="text-base font-bold text-ecoAccent mb-3 flex items-center gap-2" id="tips-title">
+                    <i class="fa-solid fa-seedling"></i> Így csökkentheted a vízlábnyomod:
+                </h3>
+                <ul class="text-xs sm:text-sm text-slate-300 space-y-2 list-disc list-inside leading-relaxed" id="tips-list">
+                    <li>Kérdezz pontosan! A kevesebb finomító prompt kevesebb szerverterhelést jelent.</li>
+                    <li>Nagyobb feladatoknál fogalmazd meg egyben a kéréseid, ahelyett hogy aprónként chatelnél.</li>
+                    <li>Képeket és videókat csak akkor generálj, ha valóban szükséged van rájuk.</li>
+                </ul>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="goToStep(2)" class="flex-1 py-3.5 bg-ecoForest hover:bg-ecoMid text-white font-bold rounded-xl border border-ecoLeaf/40 transition text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span id="s3-btn-recalc">Újraszámolás</span>
+                </button>
+                <button onclick="copyShareText()" class="flex-1 py-3.5 bg-waterBlue hover:bg-waterLight hover:text-slate-950 text-white font-bold rounded-xl transition text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-share-nodes"></i>
+                    <span id="s3-btn-share">Eredmény megosztása</span>
+                </button>
+            </div>
+        </main>
+
+        <footer class="mt-8 pt-4 border-t border-ecoLeaf/20 text-center text-xs text-slate-400">
+            <p id="footer-text">© 2026 EcoByte • Mentsük meg a bolygót felelős AI használattal!</p>
+        </footer>
+
+    </div>
+
+    <div id="toast" class="fixed bottom-5 right-5 bg-ecoLeaf text-white px-4 py-2.5 rounded-xl shadow-2xl opacity-0 pointer-events-none transition-all duration-300 text-xs font-semibold z-50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-check"></i> <span id="toast-msg">Sikeres másolás!</span>
+    </div>
+
+    <script>
+        const activities = [
+            { id: 'hello', hu: 'Rövid szia / Üdvözlés', en: 'Quick "Hello" / Greeting', liters: 0.5, icon: 'fa-hand-wave', count: 0 },
+            { id: 'chat', hu: 'Kötetlen csevegés', en: 'Casual chat session', liters: 1.5, icon: 'fa-comments', count: 0 },
+            { id: 'outline', hu: 'Vázlat / Összefoglaló kérése', en: 'Requesting an outline', liters: 2.0, icon: 'fa-file-lines', count: 0 },
+            { id: 'code', hu: 'Rövid kódrészlet generálás', en: 'Short code snippet', liters: 3.0, icon: 'fa-code', count: 0 },
+            { id: 'lesson', hu: 'Komplex tanóra / Hosszú szöveg', en: 'Lesson plan / Long text', liters: 4.5, icon: 'fa-graduation-cap', count: 0 },
+            { id: 'img_gen', hu: '1 Képgenerálás', en: '1 Image generation', liters: 5.0, icon: 'fa-wand-magic-sparkles', count: 0 },
+            { id: 'img_edit', hu: '1 Képszerkesztés', en: '1 Image edit', liters: 4.5, icon: 'fa-pen-to-square', count: 0 },
+            { id: 'presentation', hu: '1 Prezentáció készítés', en: '1 Presentation generation', liters: 10.0, icon: 'fa-file-powerpoint', count: 0 },
+            { id: 'website', hu: '1 Teljes weboldal generálás', en: '1 Full website build', liters: 15.0, icon: 'fa-laptop-code', count: 0 },
+            { id: 'video_short', hu: '5 mp videó generálása', en: '5-sec video generation', liters: 20.0, icon: 'fa-film', count: 0 },
+            { id: 'video_long', hu: 'Hosszú videó (8-10 perc)', en: 'Long video (8-10 min)', liters: 450.0, icon: 'fa-video', count: 0 }
+        ];
+
+        let userName = '';
+        let currentLang = 'hu';
+        let currentStep = 1;
+
+        const i18n = {
+            hu: {
+                headerTagline: 'AI Vízlábnyom Kalkulátor',
+                langBtn: 'English',
+                step1Text: '1. Lépés: Név',
+                step2Text: '2. Lépés: AI Használat',
+                step3Text: '3. Lépés: Eredmények',
+                s1Title: 'Üdvözöl az EcoByte!',
+                s1Subtitle: 'Minden egyes AI-val generált szöveg, kód vagy kép mögött vízfogyasztás áll. Számold ki a te napi digitális vízlábnyomodat!',
+                s1LabelName: 'Hogy hívnak?',
+                s1BtnNext: 'Számítás indítása',
+                s2Title: 'Napi AI Használatod',
+                s2Subtitle: 'Add meg, hányszor végzel az alábbi tevékenységekből egyetlen nap alatt!',
+                greeting: 'Szia',
+                s2BtnBack: 'Vissza',
+                s2BtnCalc: 'Lábnyom Kiszámítása',
+                s3Badge: 'Eredmény Elemzés',
+                s3UserTitle: 'Kedves {name}, íme a napi AI Vízlábnyomod!',
+                s3Subtitle: 'A megadott napi tevékenységeid alapján kiszámoltuk a szerverek hűtésére és áramtermelésre elhasznált vizet.',
+                resUnit: 'Liter / nap',
+                comp1Label: 'Éves szinten tele töltene:',
+                comp1Unit: 'kád vizet (150L/kád)',
+                comp2Label: 'Ez megfelel ennyi ivóvíznek:',
+                comp2Unit: 'ember napi ivóvízszükséglete (2.5L/nap)',
+                s3BreakdownTitle: 'Részletes Tételek és Fogyasztás',
+                s3TotalLabel: 'Összesen:',
+                tipsTitle: 'Így csökkentheted a vízlábnyomod:',
+                tips: [
+                    'Kérdezz pontosan! A kevesebb finomító prompt kevesebb szerverterhelést jelent.',
+                    'Nagyobb feladatoknál fogalmazd meg egyben a kéréseid, ahelyett hogy aprónként chatelnél.',
+                    'Képeket és videókat csak akkor generálj, ha valóban szükséged van rájuk.'
+                ],
+                s3BtnRecalc: 'Újraszámolás',
+                s3BtnShare: 'Eredmény megosztása',
+                footerText: '© 2026 EcoByte • Mentsük meg a bolygót felelős AI használattal!',
+                copiedMsg: 'Eredmény másolva a vágólapra!',
+                noItemsUsed: 'Még nem adtál meg használt tételt.'
+            },
+            en: {
+                headerTagline: 'AI Water Footprint Calculator',
+                langBtn: 'Magyar',
+                step1Text: 'Step 1: Name',
+                step2Text: 'Step 2: AI Usage',
+                step3Text: 'Step 3: Results',
+                s1Title: 'Welcome to EcoByte!',
+                s1Subtitle: 'Behind every AI prompt, code line, or image lies water consumption. Calculate your daily digital water footprint!',
+                s1LabelName: 'What is your name?',
+                s1BtnNext: 'Start Calculation',
+                s2Title: 'Your Daily AI Usage',
+                s2Subtitle: 'Enter how many times you perform each activity in a single day!',
+                greeting: 'Hello',
+                s2BtnBack: 'Back',
+                s2BtnCalc: 'Calculate Footprint',
+                s3Badge: 'Results Analysis',
+                s3UserTitle: 'Dear {name}, here is your daily AI Water Footprint!',
+                s3Subtitle: 'Based on your daily AI activities, we calculated the water footprint from direct cooling and electricity.',
+                resUnit: 'Liters / day',
+                comp1Label: 'In a year, it would fill:',
+                comp1Unit: 'full bathtubs (150L each)',
+                comp2Label: 'Equivalent to daily drinking water for:',
+                comp2Unit: 'people (2.5L / day)',
+                s3BreakdownTitle: 'Itemized Breakdown',
+                s3TotalLabel: 'Total:',
+                tipsTitle: 'How to reduce your footprint:',
+                tips: [
+                    'Be precise! Clear prompts reduce the need for follow-up iterations.',
+                    'Batch your requests into single structured prompts rather than long casual chat chains.',
+                    'Generate images and videos only when truly necessary.'
+                ],
+                s3BtnRecalc: 'Recalculate',
+                s3BtnShare: 'Share Footprint',
+                footerText: '© 2026 EcoByte • Save our planet through responsible AI usage!',
+                copiedMsg: 'Results copied to clipboard!',
+                noItemsUsed: 'No activities selected yet.'
+            }
+        };
+
+        function renderActivityInputs() {
+            const container = document.getElementById('activities-container');
+            container.innerHTML = '';
+
+            activities.forEach((item, index) => {
+                const label = currentLang === 'hu' ? item.hu : item.en;
+                const card = document.createElement('div');
+                card.className = 'bg-ecoDark/50 border border-ecoLeaf/30 rounded-xl p-3 flex items-center justify-between gap-3';
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-9 h-9 rounded-lg bg-ecoForest/80 text-waterLight flex items-center justify-center text-sm flex-shrink-0 border border-ecoLeaf/20">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </div>
+                        <div class="truncate">
+                            <div class="text-xs font-bold text-white truncate">${label}</div>
+                            <div class="text-[11px] text-waterLight font-semibold">${item.liters} L / alalom</div>
+                        </div>
+                    </div>
+
+                    <!-- Quantity Counter Buttons -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button onclick="updateCount(${index}, -1)" class="w-7 h-7 rounded-lg bg-ecoForest hover:bg-ecoMid text-slate-200 flex items-center justify-center text-xs transition border border-ecoLeaf/30">
+                            <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <input type="number" id="input-${item.id}" value="${item.count}" min="0" max="999" onchange="setCount(${index}, this.value)" 
+                            class="w-10 text-center bg-ecoDark border border-ecoLeaf/40 rounded-lg text-xs font-bold text-white py-1 focus:outline-none focus:border-ecoAccent">
+                        <button onclick="updateCount(${index}, 1)" class="w-7 h-7 rounded-lg bg-ecoForest hover:bg-ecoMid text-slate-200 flex items-center justify-center text-xs transition border border-ecoLeaf/30">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updateCount(index, change) {
+            activities[index].count = Math.max(0, activities[index].count + change);
+            document.getElementById(`input-${activities[index].id}`).value = activities[index].count;
+        }
+
+        function setCount(index, val) {
+            activities[index].count = Math.max(0, parseInt(val) || 0);
+        }
+
+        function goToStep(step) {
+            currentStep = step;
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.add('hidden');
+            document.getElementById('step-3').classList.add('hidden');
+
+            document.getElementById(`step-${step}`).classList.remove('hidden');
+
+            const progressBar = document.getElementById('progress-bar');
+            const progressPercentText = document.getElementById('step-progress-percent');
+            const stepIndicatorText = document.getElementById('step-indicator-text');
+            const langData = i18n[currentLang];
+
+            if (step === 1) {
+                progressBar.style.width = '33%';
+                progressPercentText.innerText = '33%';
+                stepIndicatorText.innerText = langData.step1Text;
+            } else if (step === 2) {
+                progressBar.style.width = '66%';
+                progressPercentText.innerText = '66%';
+                stepIndicatorText.innerText = langData.step2Text;
+            } else if (step === 3) {
+                progressBar.style.width = '100%';
+                progressPercentText.innerText = '100%';
+                stepIndicatorText.innerText = langData.step3Text;
+            }
+        }
+
+        function proceedToStep2() {
+            const inputName = document.getElementById('user-name').value.trim();
+            if (!inputName) return;
+            userName = inputName;
+
+            const langData = i18n[currentLang];
+            document.getElementById('user-greeting-badge').innerText = `${langData.greeting}, ${userName}!`;
+            goToStep(2);
+        }
+
+        function calculateAndShowResult() {
+            let totalLiters = 0;
+            const breakdownContainer = document.getElementById('breakdown-list');
+            breakdownContainer.innerHTML = '';
+
+            let hasUsedItems = false;
+
+            activities.forEach(item => {
+                if (item.count > 0) {
+                    hasUsedItems = true;
+                    const itemTotal = item.count * item.liters;
+                    totalLiters += itemTotal;
+
+                    const label = currentLang === 'hu' ? item.hu : item.en;
+
+                    const row = document.createElement('div');
+                    row.className = 'flex justify-between items-center text-xs p-2.5 rounded-lg bg-ecoDark/60 border border-ecoLeaf/20';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid ${item.icon} text-ecoAccent"></i>
+                            <span class="text-slate-200 font-medium">${item.count}× ${label}</span>
+                        </div>
+                        <span class="font-bold text-waterLight">${itemTotal.toFixed(1)} Liter</span>
+                    `;
+                    breakdownContainer.appendChild(row);
+                }
+            });
+
+            if (!hasUsedItems) {
+                breakdownContainer.innerHTML = `<div class="text-center text-slate-400 text-xs py-4">${i18n[currentLang].noItemsUsed}</div>`;
+            }
+
+            const totalValFormatted = totalLiters.toFixed(1);
+            document.getElementById('res-liters-num').innerText = totalValFormatted;
+            document.getElementById('breakdown-total-val').innerText = `${totalValFormatted} ${i18n[currentLang].resUnit}`;
+
+            const fillHeightPercent = Math.min(100, Math.max(15, (totalLiters / 100) * 100));
+            document.getElementById('water-fill-level').style.height = `${fillHeightPercent}%`;
+
+            const yearlyLiters = totalLiters * 365;
+            const bathtubs = Math.round(yearlyLiters / 150);
+            const peopleDrinking = Math.round(yearlyLiters / (2.5 * 365));
+
+            document.getElementById('comp1-val').innerText = `${bathtubs} ${i18n[currentLang].comp1Unit}`;
+            document.getElementById('comp2-val').innerText = `${peopleDrinking} ${i18n[currentLang].comp2Unit}`;
+
+            const langData = i18n[currentLang];
+            document.getElementById('s3-user-title').innerText = langData.s3UserTitle.replace('{name}', userName);
+
+            goToStep(3);
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'hu' ? 'en' : 'hu';
+            updateUI();
+        }
+
+        function updateUI() {
+            const langData = i18n[currentLang];
+
+            document.getElementById('header-tagline').innerText = langData.headerTagline;
+            document.getElementById('lang-btn-text').innerText = langData.langBtn;
+
+            document.getElementById('s1-title').innerText = langData.s1Title;
+            document.getElementById('s1-subtitle').innerText = langData.s1Subtitle;
+            document.getElementById('s1-label-name').innerText = langData.s1LabelName;
+            document.getElementById('s1-btn-next').innerText = langData.s1BtnNext;
+
+            document.getElementById('s2-title').innerText = langData.s2Title;
+            document.getElementById('s2-subtitle').innerText = langData.s2Subtitle;
+            if (userName) {
+                document.getElementById('user-greeting-badge').innerText = `${langData.greeting}, ${userName}!`;
+            }
+            document.getElementById('s2-btn-back').innerText = langData.s2BtnBack;
+            document.getElementById('s2-btn-calc').innerText = langData.s2BtnCalc;
+
+
+            document.getElementById('s3-badge').innerText = langData.s3Badge;
+            if (userName) {
+                document.getElementById('s3-user-title').innerText = langData.s3UserTitle.replace('{name}', userName);
+            }
+            document.getElementById('s3-subtitle').innerText = langData.s3Subtitle;
+            document.getElementById('res-liters-unit').innerText = langData.resUnit;
+            document.getElementById('comp1-label').innerText = langData.comp1Label;
+            document.getElementById('comp2-label').innerText = langData.comp2Label;
+            document.getElementById('s3-breakdown-title').innerHTML = `<i class="fa-solid fa-list-check text-ecoAccent"></i> ${langData.s3BreakdownTitle}`;
+            document.getElementById('s3-total-label').innerText = langData.s3TotalLabel;
+
+            document.getElementById('tips-title').innerHTML = `<i class="fa-solid fa-seedling"></i> ${langData.tipsTitle}`;
+            const tipsListContainer = document.getElementById('tips-list');
+            tipsListContainer.innerHTML = langData.tips.map(tip => `<li>${tip}</li>`).join('');
+
+            document.getElementById('s3-btn-recalc').innerText = langData.s3BtnRecalc;
+            document.getElementById('s3-btn-share').innerText = langData.s3BtnShare;
+            document.getElementById('footer-text').innerText = langData.footerText;
+
+            renderActivityInputs();
+
+            goToStep(currentStep);
+        }
+
+        function copyShareText() {
+            const totalLiters = document.getElementById('res-liters-num').innerText;
+            const text = `EcoByte AI Water Footprint: ${userName} uses ~${totalLiters} Liters of water daily for AI tasks! Calculate yours with EcoByte.`;
+
+            const dummy = document.createElement('textarea');
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+
+            showToast(i18n[currentLang].copiedMsg);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderActivityInputs();
+            updateUI();
+        });
+    </script>
+</body>
+</html>
