@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Water Footprint | Az AI Vízfogyasztási Lábnyoma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ecoDark: '#0f291e',
+                        ecoForest: '#163e2e',
+                        ecoMid: '#245a43',
+                        ecoLeaf: '#388e6a',
+                        ecoLight: '#e8f5e9',
+                        ecoAccent: '#4ade80',
+                        waterBlue: '#0284c7',
+                        waterLight: '#38bdf8',
+                        waterCyan: '#06b6d4'
+                    },
+                    keyframes: {
+                        wave: {
+                            '0%': { transform: 'translateX(0) translateZ(0) scaleY(1)' },
+                            '50%': { transform: 'translateX(-25%) translateZ(0) scaleY(0.85)' },
+                            '100%': { transform: 'translateX(-50%) translateZ(0) scaleY(1)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-6px)' }
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+                            '50%': { opacity: '0.8', transform: 'scale(1.05)' }
+                        }
+                    },
+                    animation: {
+                        wave: 'wave 8s linear infinite',
+                        waveFast: 'wave 5s linear infinite',
+                        float: 'float 4s ease-in-out infinite',
+                        pulseGlow: 'pulseGlow 3s ease-in-out infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #091a13 0%, #0f291e 50%, #16382b 100%);
+            color: #f1f5f9;
+            min-height: 100vh;
+        }
+
+        .earth-water-globe {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid rgba(74, 222, 128, 0.4);
+            box-shadow: 0 0 15px rgba(2, 132, 199, 0.3), inset 0 0 10px rgba(0,0,0,0.5);
+            background: radial-gradient(circle, #1e3a8a 0%, #0f172a 100%);
+            flex-shrink: 0;
+        }
+
+        .earth-continents {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0.85;
+            mix-blend-mode: overlay;
+        }
+
+        .water-fill-level {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(180deg, rgba(56, 189, 248, 0.8) 0%, rgba(2, 132, 199, 0.95) 100%);
+            transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 5;
+        }
+
+        .water-wave {
+            position: absolute;
+            top: -12px;
+            left: 0;
+            width: 200%;
+            height: 14px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0 C150,90 350,-40 500,40 C650,120 900,10 1200,40 L1200,120 L0,120 Z' fill='%2338bdf8' opacity='0.7'%3E%3C/path%3E%3C/svg%3E");
+            background-size: 50% 100%;
+        }
+
+        .water-wave-back {
+            top: -10px;
+            opacity: 0.5;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0 C200,60 400,-20 600,50 C800,110 1000,20 1200,50 L1200,120 L0,120 Z' fill='%230284c7' opacity='0.9'%3E%3C/path%3E%3C/svg%3E");
+            background-size: 50% 100%;
+        }
+
+        .eco-card {
+            background: rgba(22, 62, 46, 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .eco-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(74, 222, 128, 0.4);
+            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.15);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #091a13;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #245a43;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #388e6a;
+        }
+
+        .blue-stripe {
+            width: 4px;
+            border-radius: 9999px;
+            background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+        }
+    </style>
+</head>
+<body class="pb-20 text-slate-100">
+
+    <div class="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
+        <div class="absolute -top-32 -left-32 w-96 h-96 bg-ecoLeaf/10 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/3 -right-32 w-96 h-96 bg-waterBlue/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-32 left-1/3 w-96 h-96 bg-ecoAccent/5 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+
+        <header class="flex flex-col sm:flex-row justify-between items-center pb-8 border-b border-ecoLeaf/20 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-ecoMid border border-ecoAccent/30 flex items-center justify-center text-ecoAccent text-xl shadow-lg">
+                    <i class="fa-solid font-bold fa-leaf animate-float"></i>
+                </div>
+                <div>
+                    <span class="text-xs uppercase tracking-widest text-ecoAccent font-semibold" id="top-tagline">Fenntartható AI Kitekintő</span>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                        EcoAI <span class="text-waterLight font-normal">WaterPrint</span>
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <div class="relative w-full sm:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="search-input" onkeyup="filterActivities()" placeholder="Keresés..." 
+                        class="w-full pl-9 pr-4 py-2 text-sm bg-ecoForest/60 border border-ecoLeaf/30 rounded-full text-white placeholder-slate-400 focus:outline-none focus:border-ecoAccent transition">
+                </div>
+
+                <button onclick="toggleLanguage()" class="flex items-center gap-2 px-4 py-2 bg-ecoForest border border-ecoAccent/40 hover:border-ecoAccent text-ecoAccent hover:text-white rounded-full text-sm font-semibold transition duration-300 shadow-md">
+                    <i class="fa-solid fa-globe"></i>
+                    <span id="lang-btn-text">English</span>
+                </button>
+            </div>
+        </header>
+        <section class="mt-8 mb-12 p-6 sm:p-10 rounded-3xl eco-card relative overflow-hidden text-center sm:text-left">
+            <div class="absolute -right-10 -bottom-10 opacity-10 text-ecoAccent text-9xl pointer-events-none">
+                <i class="fa-solid fa-droplet"></i>
+            </div>
+            
+            <div class="max-w-3xl relative z-10">
+                <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-ecoAccent/10 text-ecoAccent border border-ecoAccent/20 mb-4">
+                    <span class="w-2 h-2 rounded-full bg-ecoAccent animate-ping"></span>
+                    <span id="badge-text">Teljes Ellátási Lánc Elemzés</span>
+                </span>
+                <h2 id="hero-title" class="text-3xl sm:text-5xl font-extrabold text-white leading-tight mb-4">
+                    Mennyi vizet rejt egyetlen AI prompt?
+                </h2>
+                <p id="hero-subtitle" class="text-slate-300 text-base sm:text-lg leading-relaxed mb-6">
+                    Minden egyes AI keresés, generálás és kódsor mögött adatközpontok hűtése és az áramtermelés közvetett vízfogyasztása áll. Az alábbi interaktív felületen megvizsgálhatod a teljes ökológiai lábnyomot.
+                </p>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs sm:text-sm">
+                    <div class="p-3 rounded-xl bg-ecoDark/50 border border-ecoLeaf/20 flex items-center gap-3">
+                        <i class="fa-solid fa-server text-waterLight text-lg"></i>
+                        <div>
+                            <div class="text-slate-400" id="chip1-label">Közvetlen hűtés</div>
+                            <div class="font-bold text-white" id="chip1-val">Szerveroldal</div>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-ecoDark/50 border border-ecoLeaf/20 flex items-center gap-3">
+                        <i class="fa-solid fa-bolt text-amber-400 text-lg"></i>
+                        <div>
+                            <div class="text-slate-400" id="chip2-label">Közvetett hűtés</div>
+                            <div class="font-bold text-white" id="chip2-val">Erőművi víz</div>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-ecoDark/50 border border-ecoLeaf/20 col-span-2 sm:col-span-1 flex items-center gap-3">
+                        <i class="fa-solid fa-chart-line text-ecoAccent text-lg"></i>
+                        <div>
+                            <div class="text-slate-400" id="chip3-label">Összes tételeink</div>
+                            <div class="font-bold text-white" id="chip3-val">11 AI Tevékenység</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <h3 id="section-activities-title" class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-ecoAccent"></i> AI Tevékenységek Lábnyoma
+            </h3>
+            <div class="flex items-center gap-2 text-xs text-slate-300">
+                <span id="sort-label">Rendezés:</span>
+                <button onclick="sortActivities('default')" id="btn-sort-default" class="px-3 py-1.5 rounded-lg bg-ecoAccent/20 text-ecoAccent border border-ecoAccent/40 font-semibold">Alapértelmezett</button>
+                <button onclick="sortActivities('asc')" id="btn-sort-asc" class="px-3 py-1.5 rounded-lg bg-ecoForest border border-ecoLeaf/30 hover:border-ecoAccent">Növekvő <i class="fa-solid fa-arrow-up-short-wide"></i></button>
+                <button onclick="sortActivities('desc')" id="btn-sort-desc" class="px-3 py-1.5 rounded-lg bg-ecoForest border border-ecoLeaf/30 hover:border-ecoAccent">Csökkenő <i class="fa-solid fa-arrow-down-wide-short"></i></button>
+            </div>
+        </div>
+
+        <div id="activities-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
+        </div>
+
+
+        <section class="mt-16 pt-10 border-t border-ecoLeaf/30">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+                <span class="text-xs uppercase tracking-widest text-ecoAccent font-semibold" id="chart-tagline">Összehasonlító Elemzések</span>
+                <h2 id="charts-main-title" class="text-2xl sm:text-4xl font-extrabold text-white mt-1">
+                    Fogyasztás vs. Használati Arányok
+                </h2>
+                <p id="charts-main-sub" class="text-slate-400 text-sm mt-2">
+                    Míg a nagy összetettségű feladatok elképesztő mennyiségű vizet igényelnek, a mindennapi használatot a rövid szöveges kérdések dominálják.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+
+                <div class="eco-card p-6 sm:p-8 rounded-3xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 id="chart1-title" class="font-bold text-lg text-white flex items-center gap-2">
+                                <i class="fa-solid fa-glass-water text-waterLight"></i> 1. Vízfogyasztás Skála
+                            </h3>
+                            <span class="text-xs px-2.5 py-1 rounded-full bg-waterBlue/20 text-waterLight font-medium" id="chart1-badge">Relatív Igény</span>
+                        </div>
+                        <p id="chart1-desc" class="text-xs text-slate-300 mb-6">
+                            Az egyes kategóriák közötti különbségek nagyságrendiek. A videógenerálás kiemelkedik a számítási igényével.
+                        </p>
+
+                        <div class="space-y-5">
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                                    <span id="c1-l1" class="text-slate-200">Rövid Szövegek (Szia, Csevegés, Kód)</span>
+                                    <span class="text-waterLight">0.5 – 6 Literek</span>
+                                </div>
+                                <div class="w-full h-3.5 bg-ecoDark rounded-full overflow-hidden p-0.5 border border-ecoLeaf/20">
+                                    <div class="h-full bg-gradient-to-r from-waterLight to-waterBlue rounded-full transition-all duration-1000" style="width: 4%;"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                                    <span id="c1-l2" class="text-slate-200">Képek, Prezentáció, Weboldal</span>
+                                    <span class="text-waterLight">4 – 20 Literek</span>
+                                </div>
+                                <div class="w-full h-3.5 bg-ecoDark rounded-full overflow-hidden p-0.5 border border-ecoLeaf/20">
+                                    <div class="h-full bg-gradient-to-r from-waterLight to-waterBlue rounded-full transition-all duration-1000" style="width: 22%;"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                                    <span id="c1-l3" class="text-slate-200">Rövid Videó (5 mp)</span>
+                                    <span class="text-waterLight">15 – 30 Literek</span>
+                                </div>
+                                <div class="w-full h-3.5 bg-ecoDark rounded-full overflow-hidden p-0.5 border border-ecoLeaf/20">
+                                    <div class="h-full bg-gradient-to-r from-waterLight to-waterBlue rounded-full transition-all duration-1000" style="width: 45%;"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                                    <span id="c1-l4" class="text-slate-200">Hosszú Videó (8-10 perc)</span>
+                                    <span class="text-amber-400 font-bold">300 – 600+ Literek</span>
+                                </div>
+                                <div class="w-full h-3.5 bg-ecoDark rounded-full overflow-hidden p-0.5 border border-amber-500/30">
+                                    <div class="h-full bg-gradient-to-r from-amber-400 to-red-500 rounded-full transition-all duration-1000" style="width: 100%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-4 border-t border-ecoLeaf/20 text-xs text-slate-400 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-info text-ecoAccent"></i>
+                        <span id="chart1-footer">A hosszú videógenerálás akár több száz liter vizet is elfogyaszthat.</span>
+                    </div>
+                </div>
+
+                <div class="eco-card p-6 sm:p-8 rounded-3xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 id="chart2-title" class="font-bold text-lg text-white flex items-center gap-2">
+                                <i class="fa-solid fa-users text-ecoAccent"></i> 2. Felhasználói Szokások
+                            </h3>
+                            <span class="text-xs px-2.5 py-1 rounded-full bg-ecoAccent/20 text-ecoAccent font-medium" id="chart2-badge">Gyakoriság</span>
+                        </div>
+                        <p id="chart2-desc" class="text-xs text-slate-300 mb-6">
+                            A globális AI promptok túlnyomó része szöveges alapú csevegésből és egyszerű kérésekből áll.
+                        </p>
+
+                        <div class="space-y-6">
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                                    <span id="c2-l1" class="text-slate-200">Csevegés, Vázlat, Kódolás (Szöveg)</span>
+                                    <span class="text-ecoAccent font-bold">~75%</span>
+                                </div>
+                                <div class="w-full h-4 bg-ecoDark rounded-full overflow-hidden p-0.5 border border-ecoLeaf/20">
+                                    <div class="h-full bg-gradient-to-r from-ecoLeaf to-ecoAccent rounded-full transition-all duration-1000" style="width: 75%;"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                                    <span id="c2-l2" class="text-slate-200">Képgenerálás & Szerkesztés</span>
+                                    <span class="text-ecoAccent font-bold">~18%</span>
+                                </div>
+                                <div class="w-full h-4 bg-ecoDark rounded-full overflow-hidden p-0.5 border border-ecoLeaf/20">
+                                    <div class="h-full bg-gradient-to-r from-ecoLeaf to-ecoAccent rounded-full transition-all duration-1000" style="width: 18%;"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                                    <span id="c2-l3" class="text-slate-200">Videó- és Komplex Weboldal Generálás</span>
+                                    <span class="text-ecoAccent font-bold">~7%</span>
+                                </div>
+                                <div class="w-full h-4 bg-ecoDark rounded-full overflow-hidden p-0.5 border border-ecoLeaf/20">
+                                    <div class="h-full bg-gradient-to-r from-ecoLeaf to-ecoAccent rounded-full transition-all duration-1000" style="width: 7%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-4 border-t border-ecoLeaf/20 text-xs text-slate-400 flex items-center gap-2">
+                        <i class="fa-solid fa-leaf text-ecoAccent"></i>
+                        <span id="chart2-footer">Bár a videóigény ritkább, egyetlen hosszú klip sok ezer szöveges promptnak felel meg.</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <footer class="mt-20 pt-8 border-t border-ecoLeaf/20 text-center text-xs text-slate-400">
+            <p id="footer-text" class="mb-2">
+                Adatforrások: UC Riverside, Washington University & Teljes Életciklus-elemzési (LCA) tanulmányok alapján.
+            </p>
+            <p class="text-slate-500">
+                © 2026 EcoByte WaterPrint • A fenntarthatóbb Mesterséges Intelligenciáért
+            </p>
+        </footer>
+
+    </div>
+
+    <script>
+        const activitiesData = [
+            {
+                id: 'hello',
+                hu: 'Egy rövid szia',
+                en: 'A quick "Hello"',
+                volumeDisplay: '0.5 L',
+                avgLiters: 0.5,
+                fillPercent: 8,
+                icon: 'fa-hand-wave',
+                catHu: 'Szöveg',
+                catEn: 'Text',
+                descHu: 'Egyetlen közvetlen üzenetváltás minimális token-feldolgozással.',
+                descEn: 'A single direct interaction with minimal token processing.'
+            },
+            {
+                id: 'chat',
+                hu: 'Egy célpont nélküli csevegés',
+                en: 'Casual chat',
+                volumeDisplay: '1 – 2 L',
+                avgLiters: 1.5,
+                fillPercent: 15,
+                icon: 'fa-comments',
+                catHu: 'Szöveg',
+                catEn: 'Text',
+                descHu: 'Kötetlen, pár üzenetből álló beszélgetés kontextus-ismétléssel.',
+                descEn: 'An informal multi-turn dialogue with context loops.'
+            },
+            {
+                id: 'outline',
+                hu: 'Egy vázlat kérése',
+                en: 'Requesting an outline',
+                volumeDisplay: '1.5 – 3 L',
+                avgLiters: 2.25,
+                fillPercent: 22,
+                icon: 'fa-file-lines',
+                catHu: 'Szöveg',
+                catEn: 'Text',
+                descHu: 'Strukturált gondolatmenet és pontok generálása közepes terjedelemben.',
+                descEn: 'Generating structured thoughts and bullet points.'
+            },
+            {
+                id: 'code',
+                hu: '1 rövid kód írása',
+                en: 'Short code snippet',
+                volumeDisplay: '2 – 4 L',
+                avgLiters: 3,
+                fillPercent: 28,
+                icon: 'fa-code',
+                catHu: 'Kódolás',
+                catEn: 'Coding',
+                descHu: 'Logikai ellenőrzést és szintaktikai pontosságot igénylő generálás.',
+                descEn: 'Generating precise code logic with syntax validation.'
+            },
+            {
+                id: 'lesson',
+                hu: 'Egy tanítási óra megtervezése, felépítése',
+                en: 'Lesson plan design',
+                volumeDisplay: '3 – 6 L',
+                avgLiters: 4.5,
+                fillPercent: 36,
+                icon: 'fa-graduation-cap',
+                catHu: 'Összetett Szöveg',
+                catEn: 'Complex Text',
+                descHu: 'Kiterjedt kontextusú, több szekciós pedagógiai stratégia összeállítása.',
+                descEn: 'Comprehensive multi-section educational framework.'
+            },
+            {
+                id: 'img_gen',
+                hu: '1 képgenerálás',
+                en: '1 image generation',
+                volumeDisplay: '5 L',
+                avgLiters: 5,
+                fillPercent: 42,
+                icon: 'fa-wand-magic-sparkles',
+                catHu: 'Média',
+                catEn: 'Media',
+                descHu: 'Diffúziós modellek által végzett intenzív mátrixszámítások.',
+                descEn: 'Intensive matrix calculations by diffusion models.'
+            },
+            {
+                id: 'img_edit',
+                hu: '1 képszerkesztés',
+                en: '1 image editing',
+                volumeDisplay: '4 – 5 L',
+                avgLiters: 4.5,
+                fillPercent: 40,
+                icon: 'fa-pen-to-square',
+                catHu: 'Média',
+                catEn: 'Media',
+                descHu: 'Meglévő vizuális elemek elemzése és részelemek újragenerálása.',
+                descEn: 'Analyzing existing visual structures and regenerating sub-regions.'
+            },
+            {
+                id: 'presentation',
+                hu: '1 prezentáció generálása',
+                en: '1 presentation generation',
+                volumeDisplay: '8 – 15 L',
+                avgLiters: 11.5,
+                fillPercent: 55,
+                icon: 'fa-file-powerpoint',
+                catHu: 'Multimédia',
+                catEn: 'Multimedia',
+                descHu: 'Több diábol álló szöveges és vizuális elrendezés párhuzamos generálása.',
+                descEn: 'Parallel multi-slide text layout and graphic generation.'
+            },
+            {
+                id: 'website',
+                hu: '1 teljes weboldal létrehozása',
+                en: '1 full website creation',
+                volumeDisplay: '10 – 20 L',
+                avgLiters: 15,
+                fillPercent: 68,
+                icon: 'fa-laptop-code',
+                catHu: 'Fejlesztés',
+                catEn: 'Development',
+                descHu: 'Kódstruktúrák, stílusok és tartalom komplex egyidejű felépítése.',
+                descEn: 'Complex simultaneous setup of code, styling, and content.'
+            },
+            {
+                id: 'video_short',
+                hu: '1 5 másodperces videó generálása',
+                en: '1 5-second video generation',
+                volumeDisplay: '15 – 30 L',
+                avgLiters: 22.5,
+                fillPercent: 82,
+                icon: 'fa-film',
+                catHu: 'Videó',
+                catEn: 'Video',
+                descHu: 'Képkockánkénti térbeli és időbeli diffúziós modellezés.',
+                descEn: 'Frame-by-frame spatial and temporal diffusion modeling.'
+            },
+            {
+                id: 'video_long',
+                hu: '1 hosszú videó generálása (8-10 perc)',
+                en: '1 long video generation (8-10 min)',
+                volumeDisplay: '300 – 600+ L',
+                avgLiters: 450,
+                fillPercent: 100,
+                icon: 'fa-video',
+                catHu: 'Extrém Videó',
+                catEn: 'Extreme Video',
+                descHu: 'Hosszú távú renderelés több GPU fürtön órákon át tartó hűtéssel.',
+                descEn: 'Long-term rendering over multi-GPU clusters requiring continuous cooling.'
+            }
+        ];
+
+        let currentLang = 'hu';
+        let currentSort = 'default';
+
+        const i18n = {
+            hu: {
+                topTagline: 'Fenntartható AI Kitekintő',
+                searchPlaceholder: 'Keresés feladatra...',
+                langBtn: 'English',
+                badgeText: 'Teljes Ellátási Lánc Elemzés',
+                heroTitle: 'Mennyi vizet rejt egyetlen AI prompt?',
+                heroSubtitle: 'Minden egyes AI keresés, generálás és kódsor mögött adatközpontok hűtése és az áramtermelés közvetett vízfogyasztása áll. Az alábbi interaktív felületen megvizsgálhatod a teljes ökológiai lábnyomot.',
+                chip1Label: 'Közvetlen hűtés',
+                chip1Val: 'Szerveroldal',
+                chip2Label: 'Közvetett hűtés',
+                chip2Val: 'Erőművi víz',
+                chip3Label: 'Elemzett tételek',
+                chip3Val: '11 AI Tevékenység',
+                activitiesTitle: 'AI Tevékenységek Lábnyoma',
+                sortLabel: 'Rendezés:',
+                sortDefault: 'Alapértelmezett',
+                sortAsc: 'Növekvő',
+                sortDesc: 'Csökkenő',
+                chartTagline: 'Összehasonlító Elemzések',
+                chartsMainTitle: 'Fogyasztás vs. Használati Arányok',
+                chartsMainSub: 'Míg a nagy összetettségű feladatok elképesztő mennyiségű vizet igényelnek, a mindennapi használatot a rövid szöveges kérdések dominálják.',
+                chart1Title: '1. Vízfogyasztás Skála',
+                chart1Badge: 'Relatív Igény',
+                chart1Desc: 'Az egyes kategóriák közötti különbségek nagyságrendiek. A videógenerálás kiemelkedik a számítási igényével.',
+                c1l1: 'Rövid Szövegek (Szia, Csevegés, Kód)',
+                c1l2: 'Képek, Prezentáció, Weboldal',
+                c1l3: 'Rövid Videó (5 mp)',
+                c1l4: 'Hosszú Videó (8-10 perc)',
+                chart1Footer: 'A hosszú videógenerálás akár több száz liter vizet is elfogyaszthat.',
+                chart2Title: '2. Felhasználói Szokások',
+                chart2Badge: 'Gyakoriság',
+                chart2Desc: 'A globális AI promptok túlnyomó része szöveges alapú csevegésből és egyszerű kérésekből áll.',
+                c2l1: 'Csevegés, Vázlat, Kódolás (Szöveg)',
+                c2l2: 'Képgenerálás & Szerkesztés',
+                c2l3: 'Videó- és Komplex Weboldal Generálás',
+                chart2Footer: 'Bár a videóigény ritkább, egyetlen hosszú klip sok ezer szöveges promptnak felel meg.',
+                footerText: 'Adatforrások: UC Riverside, Washington University & Teljes Életciklus-elemzési (LCA) tanulmányok alapján.'
+            },
+            en: {
+                topTagline: 'Sustainable AI Insights',
+                searchPlaceholder: 'Search activities...',
+                langBtn: 'Magyar',
+                badgeText: 'Full Supply-Chain Footprint',
+                heroTitle: 'How much water is hidden in an AI prompt?',
+                heroSubtitle: 'Behind every AI query, image, or line of code lies direct data center cooling and indirect power plant water consumption. Explore the full ecological footprint below.',
+                chip1Label: 'Direct Cooling',
+                chip1Val: 'Data Center',
+                chip2Label: 'Indirect Cooling',
+                chip2Val: 'Power Plant',
+                chip3Label: 'Analyzed Items',
+                chip3Val: '11 AI Tasks',
+                activitiesTitle: 'AI Activity Footprint',
+                sortLabel: 'Sort by:',
+                sortDefault: 'Default',
+                sortAsc: 'Ascending',
+                sortDesc: 'Descending',
+                chartTagline: 'Comparative Analytics',
+                chartsMainTitle: 'Consumption vs. Adoption Rates',
+                chartsMainSub: 'While high-complexity generative AI tasks consume vast amounts of water, everyday usage is dominated by short text prompts.',
+                chart1Title: '1. Water Consumption Scale',
+                chart1Badge: 'Relative Demand',
+                chart1Desc: 'Differences across task categories span orders of magnitude. Video generation requires massive compute resources.',
+                c1l1: 'Short Text (Hello, Chat, Code)',
+                c1l2: 'Images, Presentation, Website',
+                c1l3: 'Short Video (5 sec)',
+                c1l4: 'Long Video (8-10 min)',
+                chart1Footer: 'Long video generation can consume hundreds of liters of water.',
+                chart2Title: '2. User Usage Habits',
+                chart2Badge: 'Frequency',
+                chart2Desc: 'The vast majority of global AI queries consist of text-based conversations and simple requests.',
+                c2l1: 'Chat, Outlines, Code (Text)',
+                c2l2: 'Image Generation & Editing',
+                c2l3: 'Video & Complex Web Development',
+                chart2Footer: 'Although video tasks are rarer, a single clip equals thousands of text prompts in energy footprint.',
+                footerText: 'Data Sources: Based on UC Riverside, Washington University & Life Cycle Assessment (LCA) research.'
+            }
+        };
+
+        function renderActivities(items) {
+            const container = document.getElementById('activities-grid');
+            container.innerHTML = '';
+
+            items.forEach(item => {
+                const title = currentLang === 'hu' ? item.hu : item.en;
+                const cat = currentLang === 'hu' ? item.catHu : item.catEn;
+                const desc = currentLang === 'hu' ? item.descHu : item.descEn;
+
+                const card = document.createElement('div');
+                card.className = 'eco-card p-5 rounded-2xl flex items-center justify-between gap-4 group';
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-4 flex-grow min-w-0">
+                        <!-- Blue Stripe Indicator -->
+                        <div class="blue-stripe h-12 flex-shrink-0"></div>
+
+                        <!-- Earth Globe Water Filled Icon -->
+                        <div class="earth-water-globe">
+                            <!-- Continents SVG Overlay -->
+                            <svg class="earth-continents" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20,35 Q30,20 45,25 Q55,30 50,45 Q35,50 20,35 Z" fill="#4ade80" opacity="0.6"/>
+                                <path d="M60,20 Q80,15 85,35 Q75,45 60,35 Z" fill="#4ade80" opacity="0.6"/>
+                                <path d="M30,65 Q50,55 55,75 Q40,85 25,75 Z" fill="#4ade80" opacity="0.6"/>
+                                <path d="M65,60 Q80,55 85,70 Q75,85 65,75 Z" fill="#4ade80" opacity="0.6"/>
+                            </svg>
+
+                            <!-- Water Fill Level Animation -->
+                            <div class="water-fill-level" style="height: ${item.fillPercent}%;">
+                                <div class="water-wave animate-wave"></div>
+                                <div class="water-wave water-wave-back animate-waveFast"></div>
+                            </div>
+                        </div>
+
+                        <!-- Activity Info -->
+                        <div class="truncate">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-ecoDark/80 text-ecoAccent border border-ecoLeaf/30">
+                                    <i class="fa-solid ${item.icon} mr-1"></i> ${cat}
+                                </span>
+                            </div>
+                            <h4 class="font-bold text-white text-base truncate group-hover:text-ecoAccent transition">
+                                ${title}
+                            </h4>
+                            <p class="text-xs text-slate-300 truncate mt-0.5">
+                                ${desc}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Water Volume Badge -->
+                    <div class="flex flex-col items-end flex-shrink-0">
+                        <span class="text-xs text-slate-400 font-medium">Lábnyom</span>
+                        <span class="text-sm sm:text-base font-extrabold text-waterLight bg-waterBlue/20 px-3 py-1 rounded-full border border-waterBlue/40 whitespace-nowrap shadow-sm">
+                            <i class="fa-solid fa-droplet text-xs mr-1 text-waterLight"></i>${item.volumeDisplay}
+                        </span>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'hu' ? 'en' : 'hu';
+            updateUI();
+        }
+
+        function updateUI() {
+            const langData = i18n[currentLang];
+
+            document.getElementById('top-tagline').innerText = langData.topTagline;
+            document.getElementById('search-input').placeholder = langData.searchPlaceholder;
+            document.getElementById('lang-btn-text').innerText = langData.langBtn;
+            document.getElementById('badge-text').innerText = langData.badgeText;
+            document.getElementById('hero-title').innerText = langData.heroTitle;
+            document.getElementById('hero-subtitle').innerText = langData.heroSubtitle;
+
+            document.getElementById('chip1-label').innerText = langData.chip1Label;
+            document.getElementById('chip1-val').innerText = langData.chip1Val;
+            document.getElementById('chip2-label').innerText = langData.chip2Label;
+            document.getElementById('chip2-val').innerText = langData.chip2Val;
+            document.getElementById('chip3-label').innerText = langData.chip3Label;
+            document.getElementById('chip3-val').innerText = langData.chip3Val;
+
+            document.getElementById('section-activities-title').innerHTML = `<i class="fa-solid fa-list-check text-ecoAccent"></i> ${langData.activitiesTitle}`;
+            document.getElementById('sort-label').innerText = langData.sortLabel;
+            document.getElementById('btn-sort-default').innerText = langData.sortDefault;
+            document.getElementById('btn-sort-asc').innerHTML = `${langData.sortAsc} <i class="fa-solid fa-arrow-up-short-wide"></i>`;
+            document.getElementById('btn-sort-desc').innerHTML = `${langData.sortDesc} <i class="fa-solid fa-arrow-down-wide-short"></i>`;
+
+            document.getElementById('chart-tagline').innerText = langData.chartTagline;
+            document.getElementById('charts-main-title').innerText = langData.chartsMainTitle;
+            document.getElementById('charts-main-sub').innerText = langData.chartsMainSub;
+
+            document.getElementById('chart1-title').innerHTML = `<i class="fa-solid fa-glass-water text-waterLight"></i> ${langData.chart1Title}`;
+            document.getElementById('chart1-badge').innerText = langData.chart1Badge;
+            document.getElementById('chart1-desc').innerText = langData.chart1Desc;
+            document.getElementById('c1-l1').innerText = langData.c1l1;
+            document.getElementById('c1-l2').innerText = langData.c1l2;
+            document.getElementById('c1-l3').innerText = langData.c1l3;
+            document.getElementById('c1-l4').innerText = langData.c1l4;
+            document.getElementById('chart1-footer').innerText = langData.chart1Footer;
+
+            document.getElementById('chart2-title').innerHTML = `<i class="fa-solid fa-users text-ecoAccent"></i> ${langData.chart2Title}`;
+            document.getElementById('chart2-badge').innerText = langData.chart2Badge;
+            document.getElementById('chart2-desc').innerText = langData.chart2Desc;
+            document.getElementById('c2-l1').innerText = langData.c2l1;
+            document.getElementById('c2-l2').innerText = langData.c2l2;
+            document.getElementById('c2-l3').innerText = langData.c2l3;
+            document.getElementById('chart2-footer').innerText = langData.chart2Footer;
+
+            document.getElementById('footer-text').innerText = langData.footerText;
+
+            filterActivities();
+        }
+
+        function filterActivities() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            let filtered = activitiesData.filter(item => {
+                const title = currentLang === 'hu' ? item.hu : item.en;
+                const cat = currentLang === 'hu' ? item.catHu : item.catEn;
+                return title.toLowerCase().includes(query) || cat.toLowerCase().includes(query);
+            });
+
+            if (currentSort === 'asc') {
+                filtered.sort((a, b) => a.avgLiters - b.avgLiters);
+            } else if (currentSort === 'desc') {
+                filtered.sort((a, b) => b.avgLiters - a.avgLiters);
+            }
+
+            renderActivities(filtered);
+        }
+
+        function sortActivities(order) {
+            currentSort = order;
+
+
+            document.querySelectorAll('[id^="btn-sort-"]').forEach(btn => {
+                btn.className = "px-3 py-1.5 rounded-lg bg-ecoForest border border-ecoLeaf/30 hover:border-ecoAccent";
+            });
+
+            const activeBtn = document.getElementById(`btn-sort-${order}`);
+            if (activeBtn) {
+                activeBtn.className = "px-3 py-1.5 rounded-lg bg-ecoAccent/20 text-ecoAccent border border-ecoAccent/40 font-semibold";
+            }
+
+            filterActivities();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderActivities(activitiesData);
+        });
+    </script>
+</body>
+</html>
